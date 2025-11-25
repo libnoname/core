@@ -1,0 +1,10 @@
+node_modules
+dist
+output
+
+.idea/
+.vscode/
+
+package-lock.json
+
++ .turbo

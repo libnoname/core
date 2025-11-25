@@ -1,0 +1,36 @@
+{
+  "name": "@noname/server",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsx build.ts",
+    "build:win": "tsx build.ts win32",
+    "build:mac": "tsx build.ts darwin",
+    "build:linux": "tsx build.ts linux",
+    "run": "node index.js",
+    "runWithHttps": "node index.js --https=true"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.19.6",
+    "@types/express": "^5.0.5",
+    "@types/minimist": "^1.2.5",
+    "prettier": "^3.6.2",
+    "terser": "^5.44.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

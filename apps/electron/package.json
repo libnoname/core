@@ -1,0 +1,30 @@
+{
+  "name": "@noname/electron",
+  "version": "1.9.0",
+  "productName": "无名杀",
+  "license": "GPL-3.0-only",
+  "main": "dist/app/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "packageWin64": "tsx build.mts win64",
+    "packageWin32": "tsx build.mts win32",
+    "packageLinux": "tsx build.mts linux",
+    "packageDarwin": "tsx build.mts darwin",
+    "packageDarwinIntel": "tsx build.mts darwin_intel"
+  },
+  "devDependencies": {
+    "electron": "^39.1.1",
+    "electron-builder": "^26.0.12",
+    "tsx": "^4.20.6",
+    "vite": "^7.2.4",
+    "vite-plugin-electron": "^0.29.0"
+  },
+  "dependencies": {
+    "@electron/get": "^4.0.2",
+    "@electron/remote": "^2.1.3",
+    "@types/node": "^24.10.0",
+    "iconv-lite": "^0.7.0",
+    "@noname/server": "workspace:*"
+  }
+}
