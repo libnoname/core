@@ -82,7 +82,7 @@ function createMainWindow() {
 		icon: path.join(dirname, "noname.ico"),
 		webPreferences: {
 			webSecurity: false,
-			preload: path.join(dirname, "preload.js"),
+			preload: path.join(dirname, "app/preload.js"),
 			nodeIntegration: true, //主页面用node
 			nodeIntegrationInSubFrames: true, //子页面用node
 			nodeIntegrationInWorker: true, //worker用node
