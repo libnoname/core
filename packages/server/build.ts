@@ -23,6 +23,7 @@ async function main(platform) {
 			clean: true,
 			platform: "node",
 			dts: true,
+			banner: { js: "#!/usr/bin/env node" },
 		});
 		if (!platform) return;
 
@@ -32,15 +33,12 @@ async function main(platform) {
 			outDir: "output",
 			platform: "node",
 			bundle: true,
-			noExternal: ["minimist", "express", "body-parser"],
+			noExternal: ["minimist", "fastify", "@fastify/static", "@fastify/cors"],
 			minify: "terser",
 			outExtension({ format }) {
 				return {
 					js: `.bundle.cjs`,
 				};
-			},
-			banner: {
-				js: "#!/usr/bin/env node",
 			},
 		});
 		console.log(`Detected platform: ${platform}`);

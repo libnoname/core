@@ -1,308 +1,203 @@
 import minimist from "minimist";
-import express from "express";
-import bodyParser from "body-parser";
-import fs from "fs";
+import Fastify from "fastify";
+import fastifyStatic from "@fastify/static";
+import cors from "@fastify/cors";
+import fs from "fs/promises";
 import path from "path";
 import { cwd } from "process";
 import { exec } from "child_process";
 
-class ReturnData {
-	success;
-
-	code;
-
-	errorMsg;
-
-	data;
-
-	constructor() {}
-
-	getSuccess() {
-		return this.success;
-	}
-
-	setSuccess(success) {
-		this.success = success;
-	}
-
-	getCode() {
-		return this.code;
-	}
-
-	setCode(errorCode) {
-		this.code = errorCode;
-	}
-
-	getErrorMsg() {
-		return this.errorMsg;
-	}
-
-	setErrorMsg(errorMsg) {
-		this.errorMsg = errorMsg;
-	}
-
-	getData() {
-		this.data;
-	}
-
-	setData(data) {
-		this.data = data;
-	}
+interface JsonResult<T = any> {
+	success: boolean;
+	code: number;
+	errorMsg?: string;
+	data?: T;
 }
 
-/**
- * Business is successful.
- *
- * @param data return data.
- *
- * @return json.
- */
-const successfulJson = function successfulJson(data?: any) {
-	const returnData = new ReturnData();
-	returnData.setSuccess(true);
-	returnData.setCode(200);
-	returnData.setData(data);
-	return returnData;
-};
-
-/**
- * Business is failed.
- *
- * @param code error code.
- * @param message message.
- *
- * @return json.
- */
-const failedJson = function failedJson(code: number, message?: any) {
-	const returnData = new ReturnData();
-	returnData.setSuccess(false);
-	returnData.setCode(code);
-	returnData.setErrorMsg(message);
-	return returnData;
-};
+const successfulJson = <T = any>(data?: T): JsonResult<T> => ({
+	success: true,
+	code: 200,
+	data,
+});
+const failedJson = <T = any>(code: number, message?: string): JsonResult<T> => ({
+	success: false,
+	code,
+	errorMsg: message,
+});
 
 const oneYear = 60 * 1000 * 60 * 24 * 365;
+
 const defaultConfig = {
-	// platform: "unknow",
-	https: false,
 	server: false,
 	maxAge: oneYear,
 	port: 8089,
 	debug: false,
 	dirname: cwd(),
 };
-export default function createApp(config: Partial<typeof defaultConfig> = {}): express.Express {
+
+function createFsHandler(dirname: string) {
+	const join = (url: string) => path.join(dirname, url);
+	const isInProject = (url: string) => path.normalize(join(url)).startsWith(dirname);
+
+	const ensureSafe = (url: string) => {
+		if (!isInProject(url)) throw new Error(`只能访问 ${dirname} 下的资源`);
+		return join(url);
+	};
+
+	const wrap = <Q, R>(fn: (query: Q) => Promise<R>) => {
+		return async (req: any) => {
+			try {
+				return successfulJson(await fn(req.method == "POST" ? req.body : req.query));
+			} catch (e: any) {
+				return failedJson(400, String(e));
+			}
+		};
+	};
+
+	return { join, ensureSafe, wrap };
+}
+
+export default function createApp(config: Partial<typeof defaultConfig> = {}) {
 	const cfg = { ...defaultConfig, ...config };
-	if (cfg.debug) {
-		console.log(`config:`, cfg);
-	}
+	if (cfg.debug) console.log(cfg);
+	const app = Fastify({
+		logger: cfg.debug,
+	});
 
-	const app = express();
+	const { ensureSafe, wrap } = createFsHandler(cfg.dirname);
 
-	app.use(
-		bodyParser.json({
-			limit: "10240mb",
+	app.register(cors, {
+		origin: "*",
+		methods: ["GET", "POST", "OPTIONS"],
+	});
+
+	app.register(fastifyStatic, {
+		root: cfg.dirname,
+		prefix: "/",
+		dotfiles: "allow",
+		maxAge: cfg.debug ? 0 : cfg.maxAge,
+	});
+
+	// index.html
+	app.get("/", async (req, reply) => reply.redirect("/index.html"));
+
+	app.get(
+		"/createDir",
+		wrap(async ({ dir }: { dir: string }) => {
+			const full = ensureSafe(dir);
+			await fs.mkdir(full, { recursive: true });
+			return true;
 		})
 	);
-	app.use(
-		bodyParser.urlencoded({
-			limit: "10240mb",
-			extended: true, //需明确设置
+
+	app.get(
+		"/removeDir",
+		wrap(async ({ dir }: { dir: string }) => {
+			const full = ensureSafe(dir);
+			const stat = await fs.stat(full);
+			if (!stat.isDirectory()) throw new Error(`${full} 不是文件夹`);
+			await fs.rm(full, { recursive: true, force: true });
+			return true;
 		})
 	);
-	const join = function join(url) {
-		return path.join(cfg.dirname, url);
-	};
 
-	const isInProject = function isInProject(url) {
-		return path.normalize(join(url)).startsWith(cfg.dirname);
-	};
+	app.get(
+		"/readFile",
+		wrap(async ({ fileName }: { fileName: string }) => {
+			const full = ensureSafe(fileName);
+			const data = await fs.readFile(full);
+			return [...new Uint8Array(data)];
+		})
+	);
 
-	// parse application/x-www-form-urlencoded
-	app.use(bodyParser.urlencoded({ extended: false }));
-	// parse application/json
-	app.use(bodyParser.json());
+	app.get(
+		"/readFileAsText",
+		wrap(async ({ fileName }: { fileName: string }) => {
+			const full = ensureSafe(fileName);
+			return await fs.readFile(full, "utf-8");
+		})
+	);
 
-	// 全局 中间件  解决所有路由的 跨域问题
-	app.all(/.*/, function (req, res, next) {
-		res.header("Access-Control-Allow-Origin", "*");
-		res.header("Access-Control-Allow-Headers", "X-Requested-With,Content-Type");
-		res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-		next();
+	app.post(
+		"/writeFile",
+		{
+			bodyLimit: 10 * 1024 * 1024 * 1024,
+		},
+		wrap(async ({ path: p, data }: { path: string; data: number[] }) => {
+			const full = ensureSafe(p);
+			await fs.mkdir(path.dirname(full), { recursive: true });
+			await fs.writeFile(full, Buffer.from(data));
+			return true;
+		})
+	);
+
+	app.get(
+		"/removeFile",
+		wrap(async ({ fileName }: { fileName: string }) => {
+			const full = ensureSafe(fileName);
+			const stat = await fs.stat(full);
+			if (stat.isDirectory()) throw new Error("不能删除文件夹");
+			await fs.unlink(full);
+			return true;
+		})
+	);
+
+	app.get(
+		"/getFileList",
+		wrap(async ({ dir }: { dir: string }) => {
+			const full = ensureSafe(dir);
+			const stat = await fs.stat(full);
+			if (stat.isFile()) throw new Error("路径不是文件夹");
+
+			const entries = await fs.readdir(full);
+			const files: string[] = [];
+			const folders: string[] = [];
+
+			await Promise.all(
+				entries.map(async entry => {
+					if (entry.startsWith(".") || entry.startsWith("_")) return;
+					const s = await fs.stat(path.join(full, entry));
+					s.isDirectory() ? folders.push(entry) : files.push(entry);
+				})
+			);
+
+			return { folders, files };
+		})
+	);
+
+	app.get(
+		"/checkFile",
+		wrap(async ({ fileName }: { fileName: string }) => {
+			const full = ensureSafe(fileName);
+			const stat = await fs.stat(full);
+			if (!stat.isFile()) throw new Error("不是文件");
+			return true;
+		})
+	);
+
+	app.get(
+		"/checkDir",
+		wrap(async ({ dir }: { dir: string }) => {
+			const full = ensureSafe(dir);
+			const stat = await fs.stat(full);
+			if (!stat.isDirectory()) throw new Error("不是文件夹");
+			return true;
+		})
+	);
+
+	app.setNotFoundHandler((req, reply) => {
+		reply.code(404).send("Sorry can't find that!");
 	});
 
-	// 根据参数设置 maxAge
-	const maxAge = cfg.server && !cfg.debug ? cfg.maxAge : 0;
-
-	console.log(cfg.dirname);
-	app.use(express.static(cfg.dirname, { maxAge: maxAge, dotfiles: "allow" }));
-
-	app.get("/", (req, res) => {
-		res.send(fs.readFileSync(join("index.html")));
-	});
-
-	app.get("/createDir", (req, res) => {
-		const { dir } = req.query;
-		if (!isInProject(dir)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		if (!fs.existsSync(join(dir))) {
-			fs.mkdirSync(join(dir), { recursive: true });
-		} else {
-			if (!fs.statSync(join(dir)).isDirectory()) {
-				throw new Error(`${join(dir)}不是文件夹`);
-			}
-		}
-		res.json(successfulJson(true));
-	});
-
-	app.get("/removeDir", (req, res) => {
-		const { dir } = req.query;
-		if (!isInProject(dir)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		if (fs.existsSync(join(dir))) {
-			if (!fs.statSync(join(dir)).isDirectory()) {
-				throw new Error(`${join(dir)}不是文件夹`);
-			}
-			fs.rmdirSync(join(dir), { recursive: true });
-		}
-		res.json(successfulJson(true));
-	});
-
-	app.get("/readFile", (req, res) => {
-		const { fileName } = req.query;
-		if (!isInProject(fileName)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		if (fs.existsSync(join(fileName))) {
-			res.json(successfulJson(Array.prototype.slice.call(new Uint8Array(fs.readFileSync(join(fileName))))));
-		} else {
-			res.json(failedJson(404, "文件不存在"));
-		}
-	});
-
-	app.get("/readFileAsText", (req, res) => {
-		const { fileName } = req.query;
-		if (!isInProject(fileName)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		if (fs.existsSync(join(fileName))) {
-			res.json(successfulJson(fs.readFileSync(join(fileName), "utf-8")));
-		} else {
-			res.json(failedJson(404, "文件不存在"));
-		}
-	});
-
-	app.post("/writeFile", (req, res) => {
-		const { path: p, data } = req.body;
-		if (!isInProject(p)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		fs.mkdirSync(path.dirname(join(p)), { recursive: true });
-		fs.writeFileSync(join(p), Buffer.from(data));
-		res.json(successfulJson(true));
-	});
-
-	app.get("/removeFile", (req, res) => {
-		const { fileName } = req.query;
-		if (!isInProject(fileName)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		if (!fs.existsSync(join(fileName))) {
-			throw new Error(`文件不存在`);
-		}
-		const stat = fs.statSync(join(fileName));
-		if (stat.isDirectory()) {
-			throw new Error("不能删除文件夹");
-		}
-		fs.unlinkSync(join(fileName));
-		res.json(successfulJson(true));
-	});
-
-	app.get("/getFileList", (req, res) => {
-		const { dir } = req.query;
-		if (!isInProject(dir)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		if (!fs.existsSync(join(dir))) {
-			throw new Error(`文件夹不存在`);
-		}
-		const stat = fs.statSync(join(dir));
-		if (stat.isFile()) {
-			throw new Error("getFileList只适用于文件夹而不是文件");
-		}
-		const files: string[] = [],
-			folders: string[] = [];
-		try {
-			fs.readdir(join(dir), (err, filelist) => {
-				if (err) {
-					res.json(failedJson(500, String(err)));
-					return;
-				}
-				for (let i = 0; i < filelist.length; i++) {
-					if (filelist[i][0] != "." && filelist[i][0] != "_") {
-						if (fs.statSync(join(dir) + "/" + filelist[i]).isDirectory()) {
-							folders.push(filelist[i]);
-						} else {
-							files.push(filelist[i]);
-						}
-					}
-				}
-				res.json(successfulJson({ folders, files }));
-			});
-		} catch (e) {
-			res.json(failedJson(500, String(e)));
-		}
-	});
-
-	app.get("/checkFile", (req, res) => {
-		const { fileName } = req.query;
-		if (!isInProject(fileName)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		try {
-			if (fs.statSync(join(fileName)).isFile()) {
-				res.json(successfulJson());
-			} else {
-				res.json(failedJson(404, "不是一个文件"));
-			}
-		} catch (error) {
-			res.json(failedJson(404, "文件不存在或无法访问"));
-		}
-	});
-
-	app.get("/checkDir", (req, res) => {
-		const { dir } = req.query;
-		if (!isInProject(dir)) {
-			throw new Error(`只能访问${cfg.dirname}的文件或文件夹`);
-		}
-		try {
-			if (fs.statSync(join(dir)).isDirectory()) {
-				res.json(successfulJson());
-			} else {
-				res.json(failedJson(404, "不是一个文件夹"));
-			}
-		} catch (error) {
-			res.json(failedJson(404, "文件夹不存在或无法访问"));
-		}
-	});
-
-	app.use((req, res, next) => {
-		res.status(404).send("Sorry can't find that!");
-	});
-
-	app.use(function (err, req, res, next) {
-		console.log(err);
-		return res.json(failedJson(400, String(err)));
+	app.setErrorHandler((err, req, reply) => {
+		reply.send(failedJson(400, String(err)));
 	});
 
 	const callback = () => {
-		console.log(`应用正在使用 ${cfg.port} 端口以提供无名杀本地服务器功能!`);
-		if (!cfg.server && !cfg.debug) {
-			exec(`start ${cfg.https ? "https" : "http"}://localhost:${cfg.port}/`);
-		}
+		console.log(`Server listening on port ${cfg.port}`);
+		if (!cfg.server && !cfg.debug) exec(`start http://localhost:${cfg.port}/`);
 	};
+
 	// if (config.https) {
 	// 	const SSLOptions = {
 	// 		key: fs.readFileSync(path.join(config.dirname, "localhost.decrypted.key")),
@@ -316,7 +211,8 @@ export default function createApp(config: Partial<typeof defaultConfig> = {}): e
 	// } else {
 	// 	app.listen(config.port, callback);
 	// }
-	app.listen(cfg.port, callback);
+	app.listen({ port: cfg.port }, callback);
+
 	return app;
 }
 
