@@ -3,7 +3,7 @@ import { app, BrowserWindow, crashReporter } from "electron";
 import fs from "fs";
 import path from "path";
 import remote from "@electron/remote/main/index.js";
-import createApp from "@noname/server";
+import createApp from "@noname/fs";
 remote.initialize();
 const dirname = path.join(import.meta.dirname, "../");
 createApp({

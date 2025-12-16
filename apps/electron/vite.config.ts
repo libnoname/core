@@ -13,7 +13,7 @@ export default defineConfig({
 				vite: {
 					build: {
 						outDir: "dist/app/",
-						minify: false, // 生产可以改成 true
+						minify: false,
 						// rollupOptions: {
 						// 	output: {
 						// 		preserveModules: true,

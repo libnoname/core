@@ -17,17 +17,10 @@ function run(cmd: string, args: string[] = []) {
 
 async function main(platform) {
 	try {
-		await build({
-			entry: ["src/index.ts"],
-			format: ["esm", "cjs"],
-			clean: true,
-			platform: "node",
-			dts: true,
-			banner: { js: "#!/usr/bin/env node" },
-		});
 		if (!platform) return;
 
 		await build({
+			config: false,
 			entry: ["src/index.ts"],
 			format: "cjs",
 			outDir: "output",

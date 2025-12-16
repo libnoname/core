@@ -6,7 +6,7 @@
   "main": "dist/app/main.js",
   "type": "module",
   "scripts": {
-    "start": "vite",
+    "start": "concurrently \"vite\" \"pnpm -F noname exec vite dev\"",
     "packageWin64": "tsx build.ts win64",
     "packageWin32": "tsx build.ts win32",
     "packageLinux": "tsx build.ts linux",
@@ -22,7 +22,6 @@
   "dependencies": {
     "@electron/get": "^4.0.2",
     "@electron/remote": "^2.1.3",
-    "iconv-lite": "^0.7.0",
-    "@noname/server": "workspace:*"
+    "@noname/fs": "workspace:*"
   }
 }
