@@ -63,15 +63,15 @@ switch (process.argv[2]) {
 	case "linux":
 		main(Platform.LINUX.createTarget("dir", Arch.x64));
 		break;
-	case "darwin":
-		main(Platform.LINUX.createTarget("dir", Arch.arm64), {
+	case "macos":
+		main(Platform.MAC.createTarget("dir", Arch.arm64), {
 			mac: {
 				identity: null,
 			},
 		});
 		break;
-	case "darwin_intel":
-		main(Platform.LINUX.createTarget("dir", Arch.x64), {
+	case "macos_intel":
+		main(Platform.MAC.createTarget("dir", Arch.x64), {
 			mac: {
 				identity: null,
 			},

@@ -16,7 +16,7 @@
     "start": "tsx src/index.ts",
     "build": "tsup",
     "build:win": "tsx build.ts win32",
-    "build:mac": "tsx build.ts darwin",
+    "build:mac": "tsx build.ts macos",
     "build:linux": "tsx build.ts linux"
   },
   "keywords": [],

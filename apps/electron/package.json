@@ -6,17 +6,18 @@
   "main": "dist/app/main.js",
   "type": "module",
   "scripts": {
-    "start": "concurrently \"vite\" \"pnpm -F noname exec vite dev\"",
-    "packageWin64": "tsx build.ts win64",
-    "packageWin32": "tsx build.ts win32",
-    "packageLinux": "tsx build.ts linux",
-    "packageDarwin": "tsx build.ts darwin",
-    "packageDarwinIntel": "tsx build.ts darwin_intel"
+    "dev": "concurrently \"vite\" \"pnpm -F noname exec vite dev\"",
+    "build": "vite build",
+    "build:win64": "tsx build.ts win64",
+    "build:win32": "tsx build.ts win32",
+    "build:linux": "tsx build.ts linux",
+    "build:mac": "tsx build.ts macos",
+    "build:macIntel": "tsx build.ts macos_intel"
   },
   "devDependencies": {
     "electron": "^39.1.1",
     "electron-builder": "^26.0.12",
-    "vite": "^7.2.4",
+    "vite": "^7.3.0",
     "vite-plugin-electron": "^0.29.0"
   },
   "dependencies": {
