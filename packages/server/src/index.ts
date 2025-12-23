@@ -91,7 +91,13 @@ const util = {
 				if (count === 0) {
 					util.sendl(room.owner, "reloadroom");
 				}
-				roomList.push([room.owner.nickname, room.owner.avatar, room.config, count, room.key]);
+				roomList.push([
+					room.owner.nickname,
+					room.owner.avatar,
+					room.config,
+					count,
+					room.key,
+				]);
 			}
 		});
 
@@ -140,7 +146,14 @@ const util = {
 };
 
 const handlers = {
-	create(client: Client, key: string, nickname: string, avatar: string, config: any, mode: string) {
+	create(
+		client: Client,
+		key: string,
+		nickname: string,
+		avatar: string,
+		config: any,
+		mode: string
+	) {
 		if (client.onlineKey !== key) return;
 
 		client.nickname = util.nickname(nickname);
@@ -167,7 +180,10 @@ const handlers = {
 
 		if (!room.owner) return util.sendl(client, "enterroomfailed");
 
-		if (!room.config || (room.config.gameStarted && (!room.config.observe || !room.config.observeReady))) {
+		if (
+			!room.config ||
+			(room.config.gameStarted && (!room.config.observe || !room.config.observeReady))
+		) {
 			return util.sendl(client, "enterroomfailed");
 		}
 
@@ -226,7 +242,14 @@ const handlers = {
 					}
 				}
 			}
-		} else if (cfg && typeof cfg === "object" && "utc" in cfg && "day" in cfg && "hour" in cfg && "content" in cfg) {
+		} else if (
+			cfg &&
+			typeof cfg === "object" &&
+			"utc" in cfg &&
+			"day" in cfg &&
+			"hour" in cfg &&
+			"content" in cfg
+		) {
 			if (events.length >= 20) util.sendl(client, "eventsdenied", "total");
 			else if (cfg.utc <= now) util.sendl(client, "eventsdenied", "time");
 			else if (util.isBanned(cfg.content)) util.sendl(client, "eventsdenied", "ban");
@@ -302,7 +325,14 @@ wss.on("connection", (ws, req) => {
 		setTimeout(() => client.close(), 500);
 	}, 2000);
 
-	util.sendl(client, "roomlist", util.buildRoomList(), util.checkEvents(), util.buildClientList(), client.wsid);
+	util.sendl(
+		client,
+		"roomlist",
+		util.buildRoomList(),
+		util.checkEvents(),
+		util.buildClientList(),
+		client.wsid
+	);
 
 	// heartbeat
 	client.heartbeat = setInterval(() => {

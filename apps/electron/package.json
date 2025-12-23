@@ -1,6 +1,6 @@
 {
   "name": "@noname/electron",
-  "version": "1.9.0",
+  "version": "1.11.0",
   "productName": "无名杀",
   "license": "GPL-3.0-only",
   "main": "dist/app/main.js",
@@ -8,11 +8,9 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"pnpm -F noname exec vite dev\"",
     "build": "vite build",
-    "build:win64": "tsx build.ts win64",
-    "build:win32": "tsx build.ts win32",
+    "build:win": "tsx build.ts win",
     "build:linux": "tsx build.ts linux",
-    "build:mac": "tsx build.ts macos",
-    "build:macIntel": "tsx build.ts macos_intel"
+    "build:mac": "tsx build.ts macos"
   },
   "devDependencies": {
     "electron": "^39.1.1",

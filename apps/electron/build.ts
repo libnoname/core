@@ -1,16 +1,7 @@
-import {
-	build as buildElectron,
-	Platform,
-	Arch,
-	type PackagerOptions,
-	type Configuration,
-} from "electron-builder";
+import { build as buildElectron, Platform, Arch, type PackagerOptions, type Configuration } from "electron-builder";
 import { build as buildVite } from "vite";
 
-async function main(
-	targets: PackagerOptions["targets"],
-	config: Partial<Configuration> = {}
-) {
+async function main(targets: PackagerOptions["targets"], config: Partial<Configuration> = {}) {
 	const appPaths = await buildElectron({
 		config: {
 			asar: false,
@@ -42,36 +33,23 @@ async function main(
 await buildVite();
 
 switch (process.argv[2]) {
-	case "win64":
-		main(Platform.WINDOWS.createTarget("dir", Arch.x64), {
+	case "win":
+		main(Platform.WINDOWS.createTarget("nsis", Arch.x64, Arch.ia32), {
 			win: {
-				signAndEditExecutable: false,
 				verifyUpdateCodeSignature: false,
 				icon: "noname.ico",
 			},
-		});
-		break;
-	case "win32":
-		main(Platform.WINDOWS.createTarget("dir", Arch.ia32), {
-			win: {
-				signAndEditExecutable: false,
-				verifyUpdateCodeSignature: false,
-				icon: "noname.ico",
+			nsis: {
+				oneClick: false,
+				allowToChangeInstallationDirectory: true,
 			},
 		});
 		break;
 	case "linux":
-		main(Platform.LINUX.createTarget("dir", Arch.x64));
+		main(Platform.LINUX.createTarget("AppImage", Arch.x64));
 		break;
 	case "macos":
-		main(Platform.MAC.createTarget("dir", Arch.arm64), {
-			mac: {
-				identity: null,
-			},
-		});
-		break;
-	case "macos_intel":
-		main(Platform.MAC.createTarget("dir", Arch.x64), {
+		main(Platform.MAC.createTarget("dmg", Arch.arm64, Arch.x64), {
 			mac: {
 				identity: null,
 			},
