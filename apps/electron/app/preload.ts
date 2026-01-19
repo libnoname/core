@@ -10,7 +10,7 @@ const Menus: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] = [
 			{
 				label: "打开无名杀目录",
 				click: () => {
-					shell.showItemInFolder(__dirname);
+					shell.showItemInFolder(path.join(app.getAppPath(), "app"));
 				},
 			},
 		],
@@ -87,7 +87,7 @@ const Menus: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] = [
 							"【无名杀】属于个人（水乎）开发项目且【完全免费】。如非法倒卖用于牟利将承担法律责任 开发团队将追究到底",
 						type: "info",
 						title: "版权声明",
-						icon: path.join(__dirname, "..", "noname.ico"),
+						icon: path.join(app.getAppPath(), "app", "noname.ico"),
 					});
 				},
 			},

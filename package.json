@@ -3,14 +3,9 @@
     "version": "1.0.0",
     "type": "module",
     "scripts": {
-        "init:web": "pnpm i -F noname",
-        "dev:web": "pnpm turbo run dev --filter=noname",
-        "build": "pnpm turbo run build"
-    },
-    "packageManager": "pnpm@10.25.0",
-    "dependencies": {
-        "prettier": "^3.7.4",
-        "turbo": "^2.7.1"
+        "init:web": "pnpm i -F noname...",
+        "dev:web": "pnpm -F noname dev",
+        "build:web": "pnpm -F noname... build"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",
@@ -20,6 +15,7 @@
         "eslint": "^9.39.2",
         "eslint-plugin-vue": "^10.6.2",
         "globals": "^16.5.0",
+        "prettier": "^3.7.4",
         "terser": "^5.44.1",
         "tsup": "^8.5.1",
         "tsx": "^4.21.0",
